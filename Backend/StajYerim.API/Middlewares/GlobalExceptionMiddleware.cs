@@ -36,7 +36,7 @@ namespace StajYerim.API.Middlewares
             {
                 StatusCode = context.Response.StatusCode,
                 Message = "İşleminiz gerçekleştirilirken bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.",
-                Detailed = context.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true ? exception.Message : null
+                Detailed = exception.ToString()
             };
 
             var jsonResponse = JsonSerializer.Serialize(response);
