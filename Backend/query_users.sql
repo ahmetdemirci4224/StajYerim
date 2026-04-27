@@ -1,0 +1,1 @@
+SELECT "Email", "IsEmailVerified", "VerificationCode" FROM "Users";

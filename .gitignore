@@ -1,0 +1,23 @@
+# .NET (Backend)
+**/bin/
+**/obj/
+*.db
+*.zip
+*.log
+*.txt
+**/TestResults/
+
+# React (Frontend)
+**/node_modules/
+**/dist/
+**/build/
+frontend/.env
+
+# Docker & OS
+.DS_Store
+Thumbs.db
+
+# Postgres local
+Backend/pgsql/
+Backend/pg_data/
+Backend/pgsql.zip

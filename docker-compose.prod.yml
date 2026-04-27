@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: stajyerim_db_prod
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-S3cur3P@ssw0rd2026!}
+      POSTGRES_DB: StajYerimDb
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - stajyerim_network
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: stajyerim_backend_prod
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=db;Database=StajYerimDb;Username=postgres;Password=${DB_PASSWORD:-S3cur3P@ssw0rd2026!}
+      - Jwt__Key=${JWT_KEY:-SuperSecretProductionKeyForStajYerimApp2026!!}
+      - Jwt__Issuer=StajYerimApi
+      - Jwt__Audience=StajYerimClient
+      - CorsOrigins=http://localhost # Production Domain (Örn: https://stajyerim.com)
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - stajyerim_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stajyerim_frontend_prod
+    ports:
+      - "80:80"
+      # İleride SSL sertifikası (Let's Encrypt) eklendiğinde 443 de açılacak
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - stajyerim_network
+
+volumes:
+  postgres_data_prod:
+
+networks:
+  stajyerim_network:
+    driver: bridge

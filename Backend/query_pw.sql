@@ -1,0 +1,1 @@
+SELECT "PasswordHash" FROM "Users" WHERE "Email"='f241213083@ktun.edu.tr';

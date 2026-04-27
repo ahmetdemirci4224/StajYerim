@@ -1,0 +1,6 @@
+@StajYerim.API_HostAddress = http://localhost:5249
+
+GET {{StajYerim.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
