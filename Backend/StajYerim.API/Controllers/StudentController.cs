@@ -8,7 +8,6 @@ namespace StajYerim.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Student")] // Sadece kimliği doğrulanmış "Öğrenci" rolündeki JWT Tokenlar buraya girebilir
     public class StudentController : ControllerBase
     {
         private readonly IStudentService _studentService;
@@ -30,6 +29,7 @@ namespace StajYerim.API.Controllers
         }
 
         [HttpGet("profile")]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> GetProfile(CancellationToken cancellationToken)
         {
             var userId = GetUserId(); // Kendi User Id'sini buluyor (JWT üzerinden, güvenli!)
@@ -41,7 +41,20 @@ namespace StajYerim.API.Controllers
             return Ok(result);
         }
 
+        [HttpGet("{id}/profile")]
+        [Authorize(Roles = "Company,Student")]
+        public async Task<IActionResult> GetStudentProfileById(int id, CancellationToken cancellationToken)
+        {
+            var result = await _studentService.GetProfileAsync(id, cancellationToken);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+
         [HttpPost("profile")]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> UpsertProfile([FromBody] UpdateStudentProfileDto dto, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
@@ -57,6 +70,7 @@ namespace StajYerim.API.Controllers
         }
 
         [HttpPost("skills")]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> AddSkill([FromBody] AddStudentSkillDto dto, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
@@ -72,6 +86,7 @@ namespace StajYerim.API.Controllers
         }
 
         [HttpDelete("skills/{skillId}")]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> RemoveSkill(int skillId, CancellationToken cancellationToken)
         {
             var userId = GetUserId();

@@ -560,12 +560,49 @@ const CompanyDashboard = () => {
                                   <p className="text-xs text-gray-500">{new Date(applicant.appliedAt).toLocaleDateString('tr-TR')}</p>
                                 </div>
                               </div>
-                              <button 
-                                onClick={() => alert(`Aday detayları: ${applicant.studentName}`)}
-                                className="text-xs text-indigo-600 hover:underline font-medium"
-                              >
-                                İncele
-                              </button>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  applicant.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                                  applicant.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                  'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {applicant.status === 'Accepted' ? 'Kabul Edildi' : applicant.status === 'Rejected' ? 'Reddedildi' : 'Bekliyor'}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button 
+                                    onClick={() => navigate(`/student-profile/${applicant.studentId}`)}
+                                    className="text-xs text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded transition-colors font-medium border border-indigo-200"
+                                  >
+                                    Profili Gör
+                                  </button>
+                                  {applicant.status === 'Pending' && (
+                                    <>
+                                      <button 
+                                        onClick={async () => {
+                                          try {
+                                            const res = await api.put(`/application/${applicant.applicationId}/status`, { status: "Accepted" });
+                                            if(res.data.isSuccess) { alert("Başvuru kabul edildi!"); fetchMyPostings(); }
+                                          } catch(e) { alert("İşlem başarısız."); }
+                                        }}
+                                        className="text-xs text-green-600 hover:bg-green-50 px-2 py-1 rounded transition-colors font-medium border border-green-200"
+                                      >
+                                        Kabul
+                                      </button>
+                                      <button 
+                                        onClick={async () => {
+                                          try {
+                                            const res = await api.put(`/application/${applicant.applicationId}/status`, { status: "Rejected" });
+                                            if(res.data.isSuccess) { alert("Başvuru reddedildi!"); fetchMyPostings(); }
+                                          } catch(e) { alert("İşlem başarısız."); }
+                                        }}
+                                        className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors font-medium border border-red-200"
+                                      >
+                                        Ret
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>

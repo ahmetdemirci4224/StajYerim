@@ -156,6 +156,7 @@ namespace StajYerim.API.Controllers
                     ApplicantCount = p.Applications.Count,
                     Applicants = p.Applications.Select(a => new {
                         ApplicationId = a.Id,
+                        StudentId = a.StudentId,
                         StudentName = a.Student != null && a.Student.User != null ? a.Student.User.FullName : "Bilinmeyen Aday",
                         Status = a.Status,
                         AppliedAt = a.AppliedAt

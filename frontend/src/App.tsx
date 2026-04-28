@@ -8,6 +8,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import PostingsList from './pages/PostingsList';
 import PostingDetail from './pages/PostingDetail';
+import StudentProfile from './pages/StudentProfile';
 
 // Basit bir Route koruma bileşeni
 const PrivateRoute = ({ children, allowedRole }: { children: ReactNode, allowedRole: 'Student' | 'Company' }) => {
@@ -39,6 +40,7 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/postings" element={<PostingsList />} />
             <Route path="/postings/:id" element={<PostingDetail />} />
+            <Route path="/student-profile/:id" element={<StudentProfile />} />
             
             <Route 
               path="/student-dashboard" 

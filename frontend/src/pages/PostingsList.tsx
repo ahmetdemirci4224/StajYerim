@@ -1,16 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const PostingsList = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [postingsData, setPostingsData] = useState<any[]>([]);
   const [recommendedData, setRecommendedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'all' | 'recommended'>('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Chatbot States
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: 'user'|'assistant', text: string, matches?: any[]}[]>([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Filters
   const [filterRole, setFilterRole] = useState('');
@@ -18,6 +24,16 @@ const PostingsList = () => {
   const [filterWorkModel, setFilterWorkModel] = useState('');
 
   const isLoggedInStudent = localStorage.getItem('token') && localStorage.getItem('role') === 'Student';
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (isChatOpen) {
+      scrollToBottom();
+    }
+  }, [chatMessages, isChatOpen]);
 
   useEffect(() => {
     fetchPostings();
@@ -55,23 +71,59 @@ const PostingsList = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!searchQuery.trim()) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Yapay zeka asistanı ile akıllı arama yapabilmek için lütfen giriş yapın.');
+      navigate('/login');
+      return;
+    }
     
-    setIsSearching(true);
+    const userMsg = searchQuery.trim();
+    setIsChatOpen(true);
+    setSearchQuery('');
+    setChatMessages([
+      { role: 'assistant', text: 'Merhaba! Ben StajYerim AI Asistanınım. Sana en uygun staj ilanlarını bulmak için buradayım.' },
+      { role: 'user', text: userMsg }
+    ]);
+    setIsChatLoading(true);
+
     try {
-        const response = await api.post('/chatbot/parse', { userMessage: searchQuery });
-        if(response.data.isSuccess) {
-            const filters = response.data.data;
-            alert(`NLP Asistanı anladı:\nLokasyon: ${filters.location}\nRol: ${filters.role}\nModel: ${filters.workModel}\nYetenekler: ${filters.skills.join(', ')}`);
-        }
+      const response = await api.post('/chatbot/advice', { userMessage: userMsg });
+      if (response.data.isSuccess) {
+        const { assistantReply, matches } = response.data.data;
+        setChatMessages(prev => [...prev, { role: 'assistant', text: assistantReply, matches }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: 'assistant', text: 'Üzgünüm, şu an sana yardımcı olamıyorum.' }]);
+      }
     } catch (error) {
-        console.error(error);
-        setTimeout(() => {
-          setIsSearching(false);
-        }, 1500);
+      setChatMessages(prev => [...prev, { role: 'assistant', text: 'Bağlantı hatası oluştu veya oturum süreniz doldu.' }]);
     } finally {
-        if (api.defaults.baseURL) {
-          setIsSearching(false);
-        }
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentMessage.trim()) return;
+
+    const userMsg = currentMessage.trim();
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setCurrentMessage('');
+    setIsChatLoading(true);
+
+    try {
+      const response = await api.post('/chatbot/advice', { userMessage: userMsg });
+      if (response.data.isSuccess) {
+        const { assistantReply, matches } = response.data.data;
+        setChatMessages(prev => [...prev, { role: 'assistant', text: assistantReply, matches }]);
+      } else {
+        setChatMessages(prev => [...prev, { role: 'assistant', text: 'Üzgünüm, şu an sana yardımcı olamıyorum.' }]);
+      }
+    } catch (error) {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: 'Bağlantı hatası oluştu.' }]);
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -112,14 +164,9 @@ const PostingsList = () => {
               />
               <button 
                 type="submit" 
-                disabled={isSearching}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-80"
               >
-                {isSearching ? (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                ) : (
-                  <>AI İle Bul 🪄</>
-                )}
+                <>AI İle Bul 🪄</>
               </button>
             </div>
           </form>
@@ -268,6 +315,99 @@ const PostingsList = () => {
           );
         })()}
       </div>
+
+      {/* Full Screen Blur Chat Modal */}
+      {isChatOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col overflow-hidden animate-slide-up relative">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-5 text-white flex justify-between items-center shadow-md z-10">
+              <div className="flex items-center gap-4">
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg">StajYerim AI Asistanı</h2>
+                  <p className="text-sm text-blue-100 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse"></span> Senin için staj arıyor
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="text-white/80 hover:text-white transition-colors p-2 bg-white/10 hover:bg-white/20 rounded-full">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] p-4 rounded-3xl text-sm shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-sm'
+                      : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                  }`}>
+                    <p className="leading-relaxed">{msg.text}</p>
+                    {msg.matches && msg.matches.length > 0 && (
+                      <div className="mt-4 space-y-3 border-t border-gray-100/20 pt-4">
+                        <p className="text-xs font-bold opacity-80 uppercase tracking-wider mb-2">Önerilen İlanlar:</p>
+                        {msg.matches.map((match, mIdx) => (
+                          <div
+                            key={mIdx}
+                            onClick={() => { setIsChatOpen(false); navigate(match.type === 'Posting' ? `/postings/${match.id}` : `/student-profile/${match.id}`); }}
+                            className="bg-white text-blue-900 hover:bg-blue-50 p-3 rounded-xl cursor-pointer transition-colors shadow-sm flex items-center justify-between group"
+                          >
+                            <div>
+                              <p className="font-bold text-sm">{match.title}</p>
+                              <p className="text-xs text-blue-600/80 mt-0.5">{match.subtitle}</p>
+                            </div>
+                            <svg className="w-5 h-5 text-blue-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isChatLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] p-5 rounded-3xl bg-white border border-gray-100 rounded-tl-sm shadow-sm flex items-center gap-3">
+                    <span className="text-sm text-gray-500 font-medium">Asistan Düşünüyor</span>
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t border-gray-100">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={currentMessage}
+                  onChange={e => setCurrentMessage(e.target.value)}
+                  placeholder="Yapay zeka asistanına bir şey yaz..."
+                  className="flex-1 bg-gray-100 text-base border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-full px-6 py-3.5 outline-none transition-all"
+                  disabled={isChatLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={isChatLoading || !currentMessage.trim()}
+                  className="bg-blue-600 text-white p-3.5 rounded-full hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
