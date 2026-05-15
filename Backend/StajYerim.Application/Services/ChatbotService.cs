@@ -45,7 +45,7 @@ namespace StajYerim.Application.Services
 
             try
             {
-                var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+                var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
 
                 var prompt = $@"
 Aşağıdaki kullanıcı mesajını analiz et ve staj arama filtreleri çıkar. 
@@ -205,7 +205,7 @@ Kısa, öz ve samimi bir cevap ver.
         private async Task<string> CallGeminiAsync(string prompt, double temperature, CancellationToken cancellationToken)
         {
             var apiKey = _configuration["Gemini:ApiKey"];
-            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}";
 
             var requestBody = new {
                 contents = new[] { new { parts = new[] { new { text = prompt } } } },
