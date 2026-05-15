@@ -223,7 +223,7 @@ Kısa, öz ve samimi bir cevap ver.
                     return "Yapay zeka asistanı şu an aşırı yoğunluk nedeniyle geçici olarak hizmet veremiyor. Lütfen daha sonra tekrar dene.";
                 }
                 
-                return "Üzgünüm, şu an bağlantı kuramıyorum.";
+                return $"Üzgünüm, şu an bağlantı kuramıyorum. Detay: {errorContent}";
             }
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
